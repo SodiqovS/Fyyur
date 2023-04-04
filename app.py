@@ -1,8 +1,9 @@
 # ----------------------------------------------------------------------------#
 # Imports
 # ----------------------------------------------------------------------------#
-
+import csv
 import json
+import os
 
 import dateutil.parser
 import babel
@@ -13,6 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import FlaskForm
+from sqlalchemy import desc
 from sqlalchemy.orm import backref
 
 import config
@@ -30,15 +32,56 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = config.SQLALCHEMY_TRACK_MODIFICAT
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+
 # ----------------------------------------------------------------------------#
 # Models.
 # ----------------------------------------------------------------------------#
 
-venue_genre = db.Table(
-    "venue_genre",
-    db.Column("venue_id", db.ForeignKey("venues.id"), primary_key=True),
-    db.Column("genre_id", db.ForeignKey("genres.id"), primary_key=True)
-)
+
+class Genre(db.Model):
+    __tablename__ = "genres"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50))
+
+    def __repr__(self):
+        return f"<Genre {self.id}>"
+
+    def __str__(self):
+        return self.name
+
+
+def create_genre():
+    if Genre.query.count() == 0:
+        with open('genres.csv', 'r') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                db.session.add(Genre(name=row[0]))
+
+        db.session.commit()
+
+
+class State(db.Model):
+    __tablename__ = 'states'
+
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(2))
+
+    def __repr__(self):
+        return f"<State {self.id}>"
+
+    def __str__(self):
+        return self.code
+
+
+def create_state():
+    if State.query.count() == 0:
+        with open('states.csv', 'r') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                db.session.add(State(code=row[0]))
+
+        db.session.commit()
 
 
 class Venue(db.Model):
@@ -56,7 +99,7 @@ class Venue(db.Model):
     seeking_talent = db.Column(db.Boolean)
     seeking_description = db.Column(db.Text)
 
-    genres = db.relationship("Genre", secondary=venue_genre, backref="venues")
+    genres = db.relationship("Genre", secondary="venue_genre", backref="venues")
     shows = db.relationship('Show', backref='venue')
     state = db.relationship('State', backref='venues')
 
@@ -67,37 +110,11 @@ class Venue(db.Model):
         return self.name
 
 
-class Genre(db.Model):
-    __tablename__ = "genres"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50))
-
-    def __repr__(self):
-        return f"<Genre {self.id}>"
-
-    def __str__(self):
-        return self.name
-
-
-artist_genre = db.Table(
-    "artist_genre",
-    db.Column("artist_id", db.ForeignKey("artists.id"), primary_key=True),
+venue_genre = db.Table(
+    "venue_genre",
+    db.Column("venue_id", db.ForeignKey("venues.id"), primary_key=True),
     db.Column("genre_id", db.ForeignKey("genres.id"), primary_key=True)
 )
-
-
-class State(db.Model):
-    __tablename__ = 'states'
-
-    id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(2))
-
-    def __repr__(self):
-        return f"<State {self.id}>"
-
-    def __str__(self):
-        return self.code
 
 
 class Artist(db.Model):
@@ -108,7 +125,7 @@ class Artist(db.Model):
     city = db.Column(db.String(120))
     state_id = db.Column(db.Integer, db.ForeignKey('states.id'), nullable=False)
     phone = db.Column(db.String(20))
-    genres = db.relationship("Genre", secondary=artist_genre, backref="artists")
+    genres = db.relationship("Genre", secondary="artist_genre", backref="artists")
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website_link = db.Column(db.String(120))
@@ -125,6 +142,13 @@ class Artist(db.Model):
         return self.name
 
 
+artist_genre = db.Table(
+    "artist_genre",
+    db.Column("artist_id", db.ForeignKey("artists.id"), primary_key=True),
+    db.Column("genre_id", db.ForeignKey("genres.id"), primary_key=True)
+)
+
+
 class Show(db.Model):
     __tablename__ = 'shows'
 
@@ -136,6 +160,10 @@ class Show(db.Model):
     def __repr__(self):
         return f"<Show {self.id}>"
 
+
+db.create_all()
+create_state()
+create_genre()
 
 # ----------------------------------------------------------------------------#
 # Filters.
@@ -159,8 +187,8 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/', methods=['GET'])
 def index():
-    recently_artists = Artist.query.order_by('id').limit(10)
-    recently_venues = Venue.query.order_by('id').limit(10)
+    recently_artists = Artist.query.order_by(desc('id')).limit(10)
+    recently_venues = Venue.query.order_by(desc('id')).limit(10)
     return render_template('pages/home.html',
                            recently_artists=recently_artists,
                            recently_venues=recently_venues)
@@ -636,13 +664,12 @@ if not app.debug:
 # Launch.
 # ----------------------------------------------------------------------------#
 
-# Default port:
-if __name__ == '__main__':
-    app.run()
+# # Default port:
+# if __name__ == '__main__':
+#     app.run()
 
 # Or specify port manually:
-'''
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-'''
+    app.run(host='127.0.0.1', port=port)
