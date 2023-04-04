@@ -1,7 +1,7 @@
 from datetime import datetime
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SelectMultipleField, DateTimeField, BooleanField, HiddenField
-from wtforms.validators import DataRequired, URL, regexp
+from wtforms.validators import DataRequired, URL, regexp, Optional
 
 
 class ShowForm(FlaskForm):
@@ -42,7 +42,8 @@ class VenueForm(FlaskForm):
         'phone'
     )
     image_link = StringField(
-        'image_link'
+        'image_link',
+        validators=[URL()]
     )
     genres = SelectMultipleField(
         'genres', validators=[DataRequired()],
@@ -51,10 +52,11 @@ class VenueForm(FlaskForm):
         coerce=int
     )
     facebook_link = StringField(
-        'facebook_link', validators=[URL()]
+        'facebook_link', validators=[Optional(), URL()]
     )
     website_link = StringField(
-        'website_link'
+        'website_link',
+        validators=[Optional(), URL()]
     )
 
     seeking_talent = BooleanField('seeking_talent')
@@ -82,7 +84,8 @@ class ArtistForm(FlaskForm):
         'phone',
     )
     image_link = StringField(
-        'image_link'
+        'image_link',
+        validators=[URL()]
     )
     genres = SelectMultipleField(
         'genres', validators=[DataRequired()],
@@ -91,11 +94,11 @@ class ArtistForm(FlaskForm):
         coerce=int
     )
     facebook_link = StringField(
-        'facebook_link', validators=[URL()]
+        'facebook_link', validators=[Optional(), URL()]
     )
 
     website_link = StringField(
-        'website_link', validators=[URL()]
+        'website_link', validators=[Optional(), URL()]
     )
 
     seeking_venue = BooleanField('seeking_venue')
