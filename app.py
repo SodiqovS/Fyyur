@@ -159,7 +159,11 @@ app.jinja_env.filters['datetime'] = format_datetime
 
 @app.route('/', methods=['GET'])
 def index():
-    return render_template('pages/home.html')
+    recently_artists = Artist.query.order_by('id').limit(10)
+    recently_venues = Venue.query.order_by('id').limit(10)
+    return render_template('pages/home.html',
+                           recently_artists=recently_artists,
+                           recently_venues=recently_venues)
 
 
 #  Venues
